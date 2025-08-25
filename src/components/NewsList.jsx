@@ -5,7 +5,7 @@ export default function NewsList() {
   const [newsByDay, setNewsByDay] = useState({});
 
   useEffect(() => {
-    fetch("http://localhost:5000/news")
+      fetch('https://flash10-backend.onrender.com/news')
       .then((res) => res.json())
       .then(setNewsByDay)
       .catch((err) => console.error("API error:", err));
@@ -21,7 +21,7 @@ export default function NewsList() {
       }}
     >
       {/* Logo */}
-      <img src="./public/full-Logo.png" alt="logo" width={"220px"} />
+      <img src="/full-Logo.png" alt="logo" width={"220px"} />
 
       {/* Heading */}
       <h2
