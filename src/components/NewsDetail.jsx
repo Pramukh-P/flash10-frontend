@@ -1,3 +1,4 @@
+// client/src/components/NewsDetail.jsx
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 
@@ -17,6 +18,7 @@ export default function NewsDetail() {
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4 sm:px-8 font-sans">
       <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-2xl overflow-hidden">
+        {/* Back button */}
         <div className="p-4 border-b flex items-center justify-between">
           <Link
             to="/"
@@ -26,10 +28,12 @@ export default function NewsDetail() {
           </Link>
         </div>
 
+        {/* Content */}
         <div className="p-6">
           <h2 className="text-2xl sm:text-3xl font-bold mb-4">{news.title}</h2>
         </div>
 
+        {/* Image */}
         <img
           src={news.imageUrl || news.urlToImage || "/default.jpg"}
           alt="news"

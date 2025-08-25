@@ -1,3 +1,4 @@
+// client/src/components/NewsList.jsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -8,12 +9,20 @@ export default function NewsList() {
     fetch("https://flash10-backend.onrender.com/news")
       .then((res) => res.json())
       .then((data) => {
-        // Ensure each day’s news is an array
-        const safeData = {};
-        Object.entries(data).forEach(([day, newsList]) => {
-          safeData[day] = Array.isArray(newsList) ? newsList : [];
-        });
-        setNewsByDay(safeData);
+        // Group news by dayTag
+        const grouped = data.reduce((acc, newsItem) => {
+          const day = newsItem.dayTag || new Date(newsItem.publishedAt).toISOString().split("T")[0];
+          if (!acc[day]) acc[day] = [];
+          acc[day].push(newsItem);
+          return acc;
+        }, {});
+
+        // Sort days descending
+        const sortedGrouped = Object.fromEntries(
+          Object.entries(grouped).sort((a, b) => new Date(b[0]) - new Date(a[0]))
+        );
+
+        setNewsByDay(sortedGrouped);
       })
       .catch((err) => console.error("API error:", err));
   }, []);
@@ -28,14 +37,17 @@ export default function NewsList() {
       }}
     >
       {/* Logo */}
-      <img src="/full-Logo.png" alt="logo" width={220} />
+      <img src="/full-Logo.png" alt="logo" width={"220px"} />
 
+      {/* Heading */}
       <h2 style={{ fontSize: "28px", marginBottom: "10px", color: "#1e293b" }}>
         Top Headlines
       </h2>
 
+      {/* Show loading until news arrives */}
       {Object.keys(newsByDay).length === 0 && <p>Loading...</p>}
 
+      {/* Grouped by day */}
       {Object.entries(newsByDay).map(([dayLabel, newsList]) => (
         <div key={dayLabel} style={{ marginBottom: 50 }}>
           <h3
@@ -61,6 +73,7 @@ export default function NewsList() {
             {dayLabel}
           </h3>
 
+          {/* Cards Grid */}
           <div
             style={{
               display: "grid",
@@ -68,10 +81,8 @@ export default function NewsList() {
               gap: "20px",
             }}
           >
-            {(Array.isArray(newsList) ? newsList : [])
-              .sort(
-                (a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)
-              )
+            {newsList
+              .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
               .map((item) => (
                 <Link
                   to={`/news/${item._id}`}
