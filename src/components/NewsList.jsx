@@ -5,9 +5,16 @@ export default function NewsList() {
   const [newsByDay, setNewsByDay] = useState({});
 
   useEffect(() => {
-      fetch('https://flash10-backend.onrender.com/news')
+    fetch("https://flash10-backend.onrender.com/news")
       .then((res) => res.json())
-      .then(setNewsByDay)
+      .then((data) => {
+        // Ensure each day’s news is an array
+        const safeData = {};
+        Object.entries(data).forEach(([day, newsList]) => {
+          safeData[day] = Array.isArray(newsList) ? newsList : [];
+        });
+        setNewsByDay(safeData);
+      })
       .catch((err) => console.error("API error:", err));
   }, []);
 
@@ -21,26 +28,16 @@ export default function NewsList() {
       }}
     >
       {/* Logo */}
-      <img src="/full-Logo.png" alt="logo" width={"220px"} />
+      <img src="/full-Logo.png" alt="logo" width={220} />
 
-      {/* Heading */}
-      <h2
-        style={{
-          fontSize: "28px",
-          marginBottom: "10px",
-          color: "#1e293b",
-        }}
-      >
+      <h2 style={{ fontSize: "28px", marginBottom: "10px", color: "#1e293b" }}>
         Top Headlines
       </h2>
 
-      {/* Show loading until news arrives */}
       {Object.keys(newsByDay).length === 0 && <p>Loading...</p>}
 
-      {/* Grouped by day */}
       {Object.entries(newsByDay).map(([dayLabel, newsList]) => (
         <div key={dayLabel} style={{ marginBottom: 50 }}>
-          {/* Section Header */}
           <h3
             style={{
               fontSize: "22px",
@@ -64,7 +61,6 @@ export default function NewsList() {
             {dayLabel}
           </h3>
 
-          {/* Cards Grid */}
           <div
             style={{
               display: "grid",
@@ -72,7 +68,7 @@ export default function NewsList() {
               gap: "20px",
             }}
           >
-            {newsList
+            {(Array.isArray(newsList) ? newsList : [])
               .sort(
                 (a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)
               )
@@ -80,9 +76,7 @@ export default function NewsList() {
                 <Link
                   to={`/news/${item._id}`}
                   key={item._id}
-                  style={{
-                    textDecoration: "none",
-                  }}
+                  style={{ textDecoration: "none" }}
                 >
                   <div
                     style={{
@@ -109,11 +103,7 @@ export default function NewsList() {
                     <img
                       src={item.imageUrl || "/default.jpg"}
                       alt="news"
-                      style={{
-                        width: "100%",
-                        height: "160px",
-                        objectFit: "cover",
-                      }}
+                      style={{ width: "100%", height: "160px", objectFit: "cover" }}
                     />
                     <div style={{ padding: "12px 16px" }}>
                       <h4
@@ -126,15 +116,6 @@ export default function NewsList() {
                       >
                         {item.title}
                       </h4>
-                      {/* <p
-                        style={{
-                          fontSize: "14px",
-                          color: "#4b5563",
-                          lineHeight: "1.4",
-                        }}
-                      >
-                        {item.description || "No description available."}
-                      </p> */}
                     </div>
                   </div>
                 </Link>

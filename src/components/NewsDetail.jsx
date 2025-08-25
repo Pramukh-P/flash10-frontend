@@ -6,7 +6,7 @@ export default function NewsDetail() {
   const [news, setNews] = useState(null);
 
   useEffect(() => {
-    fetch(`http://localhost:5000/news/${id}`)
+    fetch(`https://flash10-backend.onrender.com/news/${id}`)
       .then((res) => res.json())
       .then(setNews)
       .catch((err) => console.error(err));
@@ -17,7 +17,6 @@ export default function NewsDetail() {
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4 sm:px-8 font-sans">
       <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-2xl overflow-hidden">
-        {/* Back button */}
         <div className="p-4 border-b flex items-center justify-between">
           <Link
             to="/"
@@ -27,14 +26,10 @@ export default function NewsDetail() {
           </Link>
         </div>
 
-        
-
-        {/* Content */}
         <div className="p-6">
           <h2 className="text-2xl sm:text-3xl font-bold mb-4">{news.title}</h2>
         </div>
 
-        {/* Image */}
         <img
           src={news.imageUrl || news.urlToImage || "/default.jpg"}
           alt="news"
@@ -42,18 +37,27 @@ export default function NewsDetail() {
         />
 
         <p className="text-lg text-gray-700 leading-relaxed mb-6">
-            {news.content && news.content !== "ONLY AVAILABLE IN PAID PLANS"
-              ? news.content
-              : news.description || "No description available."}
+          {news.content && news.content !== "ONLY AVAILABLE IN PAID PLANS"
+            ? news.content
+            : news.description || "No description available."}
         </p>
 
-        <div className="">
-        <a href={news.url} target="_blank" rel="noopener noreferrer" 
-        style={{ display: "inline-block", padding: "10px 16px", background: "#007BFF", 
-        color: "#fff", textDecoration: "none", borderRadius: "6px", fontWeight: "bold", }} > 
-            🔗 Read more 
+        <a
+          href={news.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "inline-block",
+            padding: "10px 16px",
+            background: "#007BFF",
+            color: "#fff",
+            textDecoration: "none",
+            borderRadius: "6px",
+            fontWeight: "bold",
+          }}
+        >
+          🔗 Read more
         </a>
-        </div>
       </div>
     </div>
   );

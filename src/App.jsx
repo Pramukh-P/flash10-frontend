@@ -7,7 +7,7 @@ function App() {
   const [health, setHealth] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:5000/health")
+    fetch("https://flash10-backend.onrender.com/health")
       .then((res) => res.json())
       .then(setHealth)
       .catch((e) => console.error("API error:", e));
