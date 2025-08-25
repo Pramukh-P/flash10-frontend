@@ -34,11 +34,19 @@ export default function NewsDetail() {
         </div>
 
         {/* Image */}
+        <div className="w-full flex justify-center my-4">
         <img
           src={news.imageUrl || news.urlToImage || "/default.jpg"}
           alt="news"
-          className="w-full max-h-[500px] object-cover"
+          style={{
+            width: "100%",
+            maxWidth: "400px", // maximum width for large screens
+            height: "auto", // keep aspect ratio
+            borderRadius: "12px",
+            objectFit: "cover",
+          }}
         />
+        </div>
 
         <p className="text-lg text-gray-700 leading-relaxed mb-6">
           {news.content && news.content !== "ONLY AVAILABLE IN PAID PLANS"
