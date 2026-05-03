@@ -35,8 +35,15 @@ export function AuthProvider({ children }) {
     localStorage.setItem("flash10_user", JSON.stringify(updated));
   };
 
+  // ✅ NEW: generic patch for any user field (e.g. bookmarks)
+  const updateUser = (patch) => {
+    const updated = { ...user, ...patch };
+    setUser(updated);
+    localStorage.setItem("flash10_user", JSON.stringify(updated));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, updatePreferences, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, updatePreferences, updateUser, loading }}>
       {children}
     </AuthContext.Provider>
   );

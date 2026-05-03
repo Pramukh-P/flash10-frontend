@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import logoSrc from "../assets/full-Logo.png";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -44,7 +45,7 @@ export default function Navbar() {
           height: 60, gap: 8,
         }}>
           {/* Logo */}
-          <Link to="/" style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 16 }}>
+          {/* <Link to="/" style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 16 }}>
             <div style={{
               background: "linear-gradient(135deg, #3b82f6, #9333ea)",
               borderRadius: 8, width: 30, height: 30,
@@ -52,6 +53,10 @@ export default function Navbar() {
               color: "#fff", fontWeight: 800, fontSize: 14,
             }}>F</div>
             <span style={{ fontWeight: 800, fontSize: 17, color: "var(--text)" }}>Flash10</span>
+          </Link> */}
+
+          <Link to="/" style={{ display: "flex", alignItems: "center", marginRight: 16 }}>
+            <img src={logoSrc} alt="Flash10" style={{ height: 36, width: "auto", objectFit: "contain" }} />
           </Link>
 
           {/* Desktop nav links */}
@@ -164,15 +169,9 @@ export default function Navbar() {
           padding: "16px 20px",
           borderBottom: "1px solid var(--nav-border)",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{
-              background: "linear-gradient(135deg, #3b82f6, #9333ea)",
-              borderRadius: 8, width: 28, height: 28,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#fff", fontWeight: 800, fontSize: 13,
-            }}>F</div>
-            <span style={{ fontWeight: 800, fontSize: 16, color: "var(--text)" }}>Flash10</span>
-          </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <img src={logoSrc} alt="Flash10" style={{ height: 36, width: "auto", objectFit: "contain" }} />
+            </div>
           <button onClick={() => setMenuOpen(false)} style={{
             background: "none", border: "none", cursor: "pointer",
             fontSize: 22, color: "var(--text2)", lineHeight: 1,
@@ -233,7 +232,7 @@ export default function Navbar() {
                 transition: "opacity 0.15s",
               }}
             >
-              <span style={{ fontSize: 18 }}>🚪</span>
+              <span style={{ fontSize: 18 }}></span>
               Logout
             </button>
           </div>

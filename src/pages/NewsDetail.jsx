@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../utils/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import { FaBookmark, FaRegBookmark } from "react-icons/fa";
 
 const CATEGORY_ICONS = {
   general: "📰", politics: "🏛️", sports: "⚽",
@@ -12,7 +13,7 @@ const CATEGORY_ICONS = {
 
 export default function NewsDetail() {
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth(); // ✅ pull in updateUser
   const navigate = useNavigate();
   const [news, setNews] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,10 +29,12 @@ export default function NewsDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Check if bookmarked
+  // ✅ Reads from always-fresh user.bookmarks in context
   useEffect(() => {
     if (user && user.bookmarks) {
       setBookmarked(user.bookmarks.includes(id));
+    } else {
+      setBookmarked(false);
     }
   }, [user, id]);
 
@@ -52,7 +55,6 @@ export default function NewsDetail() {
       );
       const data = await res.json();
       if (res.status === 503) {
-        // HF model is cold-starting
         setSummary(`⏳ AI model is warming up. Please try again in ${data.retryAfter || 20} seconds.`);
       } else if (!res.ok) {
         setSummary("Failed to generate summary. Please try again.");
@@ -73,9 +75,13 @@ export default function NewsDetail() {
       if (bookmarked) {
         await apiFetch(`/user/bookmarks/${id}`, { method: "DELETE" }, user.token);
         setBookmarked(false);
+        // ✅ Sync removal into context + localStorage
+        updateUser({ bookmarks: (user.bookmarks || []).filter(b => b !== id) });
       } else {
         await apiFetch(`/user/bookmarks/${id}`, { method: "POST" }, user.token);
         setBookmarked(true);
+        // ✅ Sync addition into context + localStorage
+        updateUser({ bookmarks: [...(user.bookmarks || []), id] });
       }
     } catch (err) {
       console.error(err);
@@ -127,14 +133,15 @@ export default function NewsDetail() {
             )}
             <span style={{ fontSize: 12, color: "var(--text2)", marginLeft: "auto" }}>{date}</span>
 
-            {/* Bookmark button */}
+            {/* ✅ Proper bookmark icons, loading feedback */}
             <button
               className={`bookmark-btn${bookmarked ? " active" : ""}`}
               onClick={handleBookmark}
               disabled={bookmarkLoading}
               title={bookmarked ? "Remove bookmark" : "Save article"}
+              style={{ opacity: bookmarkLoading ? 0.5 : 1, fontSize: 18 }}
             >
-              {bookmarked ? "🔖" : "🔕"}
+              {bookmarked ? <FaBookmark /> : <FaRegBookmark />}
             </button>
           </div>
 
@@ -152,7 +159,7 @@ export default function NewsDetail() {
                 disabled={summarizing}
                 style={{ alignSelf: "flex-start" }}
               >
-                {summarizing ? "⏳ Summarizing..." : "✨ AI Summary (Free)"}
+                {summarizing ? "⏳ Summarizing..." : "✨ AI Summary (Coming Soon)"}
                 {!user && <span style={{ fontSize: 11, opacity: 0.8 }}> (Login required)</span>}
               </button>
               {summary?.startsWith("⏳") && (
