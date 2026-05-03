@@ -1,5 +1,5 @@
 // flash10-frontend/src/components/Navbar.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -17,122 +17,273 @@ export default function Navbar() {
 
   const isActive = (path) => location.pathname === path;
 
+  // Close menu on route change
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  // Prevent body scroll when menu is open
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [menuOpen]);
+
   return (
-    <nav style={{
-      position: "sticky", top: 0, zIndex: 100,
-      background: "var(--nav-bg)",
-      borderBottom: "1px solid var(--nav-border)",
-      backdropFilter: "blur(12px)",
-      WebkitBackdropFilter: "blur(12px)",
-    }}>
-      <div style={{
-        maxWidth: 1200, margin: "0 auto",
-        padding: "0 20px",
-        display: "flex", alignItems: "center",
-        height: 60, gap: 8,
+    <>
+      <nav style={{
+        position: "sticky", top: 0, zIndex: 100,
+        background: "var(--nav-bg)",
+        borderBottom: "1px solid var(--nav-border)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
       }}>
-        {/* Logo */}
-        <Link to="/" style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 16 }}>
+        <div style={{
+          maxWidth: 1200, margin: "0 auto",
+          padding: "0 20px",
+          display: "flex", alignItems: "center",
+          height: 60, gap: 8,
+        }}>
+          {/* Logo */}
+          <Link to="/" style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 16 }}>
+            <div style={{
+              background: "linear-gradient(135deg, #3b82f6, #9333ea)",
+              borderRadius: 8, width: 30, height: 30,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#fff", fontWeight: 800, fontSize: 14,
+            }}>F</div>
+            <span style={{ fontWeight: 800, fontSize: 17, color: "var(--text)" }}>Flash10</span>
+          </Link>
+
+          {/* Desktop nav links */}
+          <div style={{ display: "flex", gap: 4, flex: 1, alignItems: "center" }}
+            className="desktop-nav">
+            <NavLink to="/" active={isActive("/")}>🏠 Home</NavLink>
+            {user && <NavLink to="/for-you" active={isActive("/for-you")}>⭐ For You</NavLink>}
+            {user && <NavLink to="/bookmarks" active={isActive("/bookmarks")}>🔖 Saved</NavLink>}
+          </div>
+
+          {/* Desktop auth actions */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }} className="desktop-nav">
+            {user ? (
+              <>
+                <Link to="/preferences" className="btn btn-outline btn-sm"
+                  style={{ textDecoration: "none" }}>⚙️ Preferences</Link>
+                <span style={{ fontSize: 13, color: "var(--text2)" }}>
+                  Hi, {user.name.split(" ")[0]}
+                </span>
+                <button className="btn btn-sm" onClick={handleLogout}
+                  style={{ background: "#fee2e2", color: "#b91c1c", border: "none" }}>
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="btn btn-outline btn-sm"
+                  style={{ textDecoration: "none" }}>Login</Link>
+                <Link to="/register" className="btn btn-primary btn-sm"
+                  style={{ textDecoration: "none" }}>Sign Up</Link>
+              </>
+            )}
+          </div>
+
+          {/* Mobile hamburger button */}
+          <button
+            className="hamburger-btn"
+            onClick={() => setMenuOpen(prev => !prev)}
+            aria-label="Toggle menu"
+            style={{
+              display: "none",
+              flexDirection: "column", justifyContent: "center",
+              alignItems: "center", gap: 5,
+              width: 40, height: 40, padding: 8,
+              background: "none", border: "none",
+              cursor: "pointer", borderRadius: 8,
+              marginLeft: "auto",
+            }}
+          >
+            <span style={{
+              display: "block", width: 22, height: 2,
+              background: "var(--text)",
+              borderRadius: 2,
+              transition: "transform 0.3s, opacity 0.3s",
+              transform: menuOpen ? "translateY(7px) rotate(45deg)" : "none",
+            }} />
+            <span style={{
+              display: "block", width: 22, height: 2,
+              background: "var(--text)",
+              borderRadius: 2,
+              transition: "opacity 0.3s",
+              opacity: menuOpen ? 0 : 1,
+            }} />
+            <span style={{
+              display: "block", width: 22, height: 2,
+              background: "var(--text)",
+              borderRadius: 2,
+              transition: "transform 0.3s, opacity 0.3s",
+              transform: menuOpen ? "translateY(-7px) rotate(-45deg)" : "none",
+            }} />
+          </button>
+        </div>
+      </nav>
+
+      {/* Backdrop */}
+      <div
+        className="mobile-only"
+        onClick={() => setMenuOpen(false)}
+        style={{
+          position: "fixed", inset: 0, zIndex: 150,
+          background: "rgba(0,0,0,0.45)",
+          backdropFilter: "blur(2px)",
+          opacity: menuOpen ? 1 : 0,
+          pointerEvents: menuOpen ? "all" : "none",
+          transition: "opacity 0.3s ease",
+        }}
+      />
+
+      {/* Slide-in drawer */}
+      <div
+        className="mobile-only"
+        style={{
+          position: "fixed", top: 0, right: 0, bottom: 0,
+          width: 270, zIndex: 200,
+          background: "var(--nav-bg)",
+          borderLeft: "1px solid var(--nav-border)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          transform: menuOpen ? "translateX(0)" : "translateX(100%)",
+          transition: "transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+          display: "flex", flexDirection: "column",
+          padding: "0 0 32px",
+          overflowY: "auto",
+        }}
+      >
+        {/* Drawer header */}
+        <div style={{
+          display: "flex", alignItems: "center",
+          justifyContent: "space-between",
+          padding: "16px 20px",
+          borderBottom: "1px solid var(--nav-border)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{
+              background: "linear-gradient(135deg, #3b82f6, #9333ea)",
+              borderRadius: 8, width: 28, height: 28,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#fff", fontWeight: 800, fontSize: 13,
+            }}>F</div>
+            <span style={{ fontWeight: 800, fontSize: 16, color: "var(--text)" }}>Flash10</span>
+          </div>
+          <button onClick={() => setMenuOpen(false)} style={{
+            background: "none", border: "none", cursor: "pointer",
+            fontSize: 22, color: "var(--text2)", lineHeight: 1,
+            padding: 4, borderRadius: 6,
+          }}>✕</button>
+        </div>
+
+        {/* User info */}
+        {user && (
           <div style={{
-            background: "linear-gradient(135deg, #3b82f6, #9333ea)",
-            borderRadius: 8, width: 30, height: 30,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "#fff", fontWeight: 800, fontSize: 14,
-          }}>F</div>
-          <span style={{ fontWeight: 800, fontSize: 17, color: "var(--text)" }}>Flash10</span>
-        </Link>
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--nav-border)",
+          }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 12,
+            }}>
+              <div style={{
+                width: 42, height: 42, borderRadius: "50%",
+                background: "linear-gradient(135deg, #3b82f6, #9333ea)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#fff", fontWeight: 700, fontSize: 16, flexShrink: 0,
+              }}>
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text)" }}>
+                  {user.name}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text2)" }}>
+                  {user.email || "Logged in"}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-        {/* Desktop nav links */}
-        <div style={{ display: "flex", gap: 4, flex: 1, alignItems: "center" }}
-          className="desktop-nav">
-          <NavLink to="/" active={isActive("/")}>🏠 Home</NavLink>
-          {user && <NavLink to="/for-you" active={isActive("/for-you")}>⭐ For You</NavLink>}
-          {user && <NavLink to="/bookmarks" active={isActive("/bookmarks")}>🔖 Saved</NavLink>}
+        {/* Nav links */}
+        <div style={{ flex: 1, padding: "12px 12px" }}>
+          <DrawerLink to="/" icon="🏠" label="Home" active={isActive("/")} onClick={() => setMenuOpen(false)} />
+          {user && <DrawerLink to="/for-you" icon="⭐" label="For You" active={isActive("/for-you")} onClick={() => setMenuOpen(false)} />}
+          {user && <DrawerLink to="/bookmarks" icon="🔖" label="Saved" active={isActive("/bookmarks")} onClick={() => setMenuOpen(false)} />}
+          {user && <DrawerLink to="/preferences" icon="⚙️" label="Preferences" active={isActive("/preferences")} onClick={() => setMenuOpen(false)} />}
+          {!user && <DrawerLink to="/login" icon="👤" label="Login" active={isActive("/login")} onClick={() => setMenuOpen(false)} />}
+          {!user && <DrawerLink to="/register" icon="✏️" label="Sign Up" active={isActive("/register")} onClick={() => setMenuOpen(false)} />}
         </div>
 
-        {/* Auth actions */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {user ? (
-            <>
-              <Link to="/preferences" className="btn btn-outline btn-sm"
-                style={{ textDecoration: "none" }}>
-                ⚙️ Preferences
-              </Link>
-              <span style={{ fontSize: 13, color: "var(--text2)" }}>
-                Hi, {user.name.split(" ")[0]}
-              </span>
-              <button className="btn btn-sm" onClick={handleLogout}
-                style={{ background: "#fee2e2", color: "#b91c1c", border: "none" }}>
-                Logout
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/login" className="btn btn-outline btn-sm"
-                style={{ textDecoration: "none" }}>Login</Link>
-              <Link to="/register" className="btn btn-primary btn-sm"
-                style={{ textDecoration: "none" }}>Sign Up</Link>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Mobile bottom nav */}
-      <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0,
-        background: "var(--nav-bg)", borderTop: "1px solid var(--nav-border)",
-        display: "flex", justifyContent: "space-around", padding: "8px 0 12px",
-        backdropFilter: "blur(12px)", zIndex: 100,
-      }} className="mobile-bottom-nav">
-        <MobileNav to="/" icon="🏠" label="Home" active={isActive("/")} />
-        {user
-          ? <MobileNav to="/for-you" icon="⭐" label="For You" active={isActive("/for-you")} />
-          : <MobileNav to="/login" icon="👤" label="Login" active={isActive("/login")} />
-        }
-        {user && <MobileNav to="/bookmarks" icon="🔖" label="Saved" active={isActive("/bookmarks")} />}
-        {user && <MobileNav to="/preferences" icon="⚙️" label="Prefs" active={isActive("/preferences")} />}
+        {/* Logout at bottom */}
+        {user && (
+          <div style={{ padding: "0 12px" }}>
+            <button
+              onClick={handleLogout}
+              style={{
+                width: "100%", display: "flex", alignItems: "center",
+                gap: 12, padding: "12px 14px", borderRadius: 10,
+                background: "#fee2e2", color: "#b91c1c",
+                border: "none", cursor: "pointer",
+                fontSize: 14, fontWeight: 600,
+                transition: "opacity 0.15s",
+              }}
+            >
+              <span style={{ fontSize: 18 }}>🚪</span>
+              Logout
+            </button>
+          </div>
+        )}
       </div>
 
       <style>{`
         @media (max-width: 640px) {
           .desktop-nav { display: none !important; }
-          nav > div { padding-bottom: 0 !important; }
+          .hamburger-btn { display: flex !important; }
         }
         @media (min-width: 641px) {
-          .mobile-bottom-nav { display: none !important; }
+          .mobile-only { display: none !important; }
         }
         body { padding-bottom: 0; }
-        @media (max-width: 640px) { body { padding-bottom: 70px; } }
       `}</style>
-    </nav>
+    </>
   );
 }
 
 function NavLink({ to, active, children }) {
   return (
     <Link to={to} style={{
-      padding: "6px 12px",
-      borderRadius: 8,
-      fontSize: 14,
-      fontWeight: active ? 600 : 400,
+      padding: "6px 12px", borderRadius: 8,
+      fontSize: 14, fontWeight: active ? 600 : 400,
       color: active ? "var(--accent)" : "var(--text2)",
       background: active ? "var(--tag-bg)" : "transparent",
-      textDecoration: "none",
-      transition: "all 0.15s",
+      textDecoration: "none", transition: "all 0.15s",
     }}>{children}</Link>
   );
 }
 
-function MobileNav({ to, icon, label, active }) {
+function DrawerLink({ to, icon, label, active, onClick }) {
   return (
-    <Link to={to} style={{
-      display: "flex", flexDirection: "column",
-      alignItems: "center", gap: 2,
-      color: active ? "var(--accent)" : "var(--text2)",
-      textDecoration: "none", fontSize: 11, fontWeight: active ? 600 : 400,
+    <Link to={to} onClick={onClick} style={{
+      display: "flex", alignItems: "center", gap: 12,
+      padding: "12px 14px", borderRadius: 10, marginBottom: 4,
+      fontSize: 14, fontWeight: active ? 600 : 400,
+      color: active ? "var(--accent)" : "var(--text)",
+      background: active ? "var(--tag-bg)" : "transparent",
+      textDecoration: "none", transition: "background 0.15s, color 0.15s",
     }}>
-      <span style={{ fontSize: 20 }}>{icon}</span>
+      <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{icon}</span>
       {label}
+      {active && (
+        <span style={{
+          marginLeft: "auto", width: 6, height: 6,
+          borderRadius: "50%", background: "var(--accent)",
+        }} />
+      )}
     </Link>
   );
 }
