@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import logoSrc from "../assets/full-Logo.png";
+import { TbLogout } from "react-icons/tb";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -18,12 +19,10 @@ export default function Navbar() {
 
   const isActive = (path) => location.pathname === path;
 
-  // Close menu on route change
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
 
-  // Prevent body scroll when menu is open
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -45,17 +44,7 @@ export default function Navbar() {
           height: 60, gap: 8,
         }}>
           {/* Logo */}
-          {/* <Link to="/" style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 16 }}>
-            <div style={{
-              background: "linear-gradient(135deg, #3b82f6, #9333ea)",
-              borderRadius: 8, width: 30, height: 30,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#fff", fontWeight: 800, fontSize: 14,
-            }}>F</div>
-            <span style={{ fontWeight: 800, fontSize: 17, color: "var(--text)" }}>Flash10</span>
-          </Link> */}
-
-          <Link to="/" style={{ display: "flex", alignItems: "center", marginRight: 16 }}>
+          <Link to="/" style={{ display: "flex", alignItems: "center", marginRight: 16, flexShrink: 0 }}>
             <img src={logoSrc} alt="Flash10" style={{ height: 36, width: "auto", objectFit: "contain" }} />
           </Link>
 
@@ -67,17 +56,36 @@ export default function Navbar() {
             {user && <NavLink to="/bookmarks" active={isActive("/bookmarks")}>🔖 Saved</NavLink>}
           </div>
 
-          {/* Desktop auth actions */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }} className="desktop-nav">
+          {/* Desktop auth actions — compact: avatar + name + preferences + logout */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}
+            className="desktop-nav">
             {user ? (
               <>
                 <Link to="/preferences" className="btn btn-outline btn-sm"
                   style={{ textDecoration: "none" }}>⚙️ Preferences</Link>
-                <span style={{ fontSize: 13, color: "var(--text2)" }}>
-                  Hi, {user.name.split(" ")[0]}
-                </span>
+
+                {/* Compact user avatar + name */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: "50%",
+                    background: "linear-gradient(135deg, #3b82f6, #9333ea)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#fff", fontWeight: 700, fontSize: 13, flexShrink: 0,
+                  }}>
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="user-name-label" style={{ lineHeight: 1.2 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text)" }}>
+                      {user.name.split(" ")[0]}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text2)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {user.email || ""}
+                    </div>
+                  </div>
+                </div>
+
                 <button className="btn btn-sm" onClick={handleLogout}
-                  style={{ background: "#fee2e2", color: "#b91c1c", border: "none" }}>
+                  style={{ background: "#fee2e2", color: "#b91c1c", border: "none", flexShrink: 0 }}>
                   Logout
                 </button>
               </>
@@ -108,22 +116,19 @@ export default function Navbar() {
           >
             <span style={{
               display: "block", width: 22, height: 2,
-              background: "var(--text)",
-              borderRadius: 2,
+              background: "var(--text)", borderRadius: 2,
               transition: "transform 0.3s, opacity 0.3s",
               transform: menuOpen ? "translateY(7px) rotate(45deg)" : "none",
             }} />
             <span style={{
               display: "block", width: 22, height: 2,
-              background: "var(--text)",
-              borderRadius: 2,
+              background: "var(--text)", borderRadius: 2,
               transition: "opacity 0.3s",
               opacity: menuOpen ? 0 : 1,
             }} />
             <span style={{
               display: "block", width: 22, height: 2,
-              background: "var(--text)",
-              borderRadius: 2,
+              background: "var(--text)", borderRadius: 2,
               transition: "transform 0.3s, opacity 0.3s",
               transform: menuOpen ? "translateY(-7px) rotate(-45deg)" : "none",
             }} />
@@ -169,9 +174,7 @@ export default function Navbar() {
           padding: "16px 20px",
           borderBottom: "1px solid var(--nav-border)",
         }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <img src={logoSrc} alt="Flash10" style={{ height: 36, width: "auto", objectFit: "contain" }} />
-            </div>
+          <img src={logoSrc} alt="Flash10" style={{ height: 30, width: "auto", objectFit: "contain" }} />
           <button onClick={() => setMenuOpen(false)} style={{
             background: "none", border: "none", cursor: "pointer",
             fontSize: 22, color: "var(--text2)", lineHeight: 1,
@@ -181,13 +184,8 @@ export default function Navbar() {
 
         {/* User info */}
         {user && (
-          <div style={{
-            padding: "16px 20px",
-            borderBottom: "1px solid var(--nav-border)",
-          }}>
-            <div style={{
-              display: "flex", alignItems: "center", gap: 12,
-            }}>
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--nav-border)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{
                 width: 42, height: 42, borderRadius: "50%",
                 background: "linear-gradient(135deg, #3b82f6, #9333ea)",
@@ -221,32 +219,34 @@ export default function Navbar() {
         {/* Logout at bottom */}
         {user && (
           <div style={{ padding: "0 12px" }}>
-            <button
-              onClick={handleLogout}
-              style={{
-                width: "100%", display: "flex", alignItems: "center",
-                gap: 12, padding: "12px 14px", borderRadius: 10,
-                background: "#fee2e2", color: "#b91c1c",
-                border: "none", cursor: "pointer",
-                fontSize: 14, fontWeight: 600,
-                transition: "opacity 0.15s",
-              }}
-            >
-              <span style={{ fontSize: 18 }}></span>
-              Logout
+            <button onClick={handleLogout} style={{
+              width: "100%", display: "flex", alignItems: "center",
+              gap: 7, padding: "12px 14px", borderRadius: 10,
+              background: "#fee2e2", color: "#b91c1c",
+              border: "none", cursor: "pointer",
+              fontSize: 16, fontWeight: 600,
+            }}>
+              Logout <span style={{ fontSize: 16 }}><TbLogout /></span>
             </button>
           </div>
         )}
       </div>
 
       <style>{`
-        @media (max-width: 640px) {
+        /* ✅ Raised breakpoint to 900px so mid-size laptop tabs use the drawer */
+        @media (max-width: 900px) {
           .desktop-nav { display: none !important; }
           .hamburger-btn { display: flex !important; }
         }
-        @media (min-width: 641px) {
+        @media (min-width: 901px) {
           .mobile-only { display: none !important; }
         }
+
+        /* ✅ Hide email label at medium sizes to save space */
+        @media (max-width: 1100px) {
+          .user-name-label { display: none !important; }
+        }
+
         body { padding-bottom: 0; }
       `}</style>
     </>
