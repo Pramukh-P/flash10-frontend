@@ -26,70 +26,41 @@ export default function Navbar() {
             backdropFilter: "blur(12px)",
             WebkitBackdropFilter: "blur(12px)",
         }}>
-            <div style={{
-                maxWidth: 1200,
-                margin: "0 auto",
-                padding: "0 12px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between", // 🔥 important
-                flexWrap: "wrap",                // 🔥 allows wrapping
-                height: "auto",
-                gap: 8,
-            }}>
-                {/* Logo */}
-                <Link to="/" style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 16 }}>
-                    {/* <div style={{
-                        background: "linear-gradient(135deg, #3b82f6, #9333ea)",
-                        borderRadius: 8, width: 30, height: 30,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        color: "#fff", fontWeight: 800, fontSize: 14,
-                        }}>F</div>
-                        <span style={{ fontWeight: 800, fontSize: 17, color: "var(--text)" }}>Flash10</span> */}
-                    <img className="logo" src={logo} alt="logo" />
-                </Link>
+            <div className="nav-container">
 
-                {/* Desktop nav links */}
-                <div
-                    style={{
-                        display: "flex",
-                        gap: 4,
-                        flex: 1,
-                        alignItems: "center",
-                        minWidth: 0,   // 🔥 important fix
-                    }}
-                    className="desktop-nav"
-                >
+                {/* LEFT */}
+                <div className="nav-left">
+                    <Link to="/">
+                        <img className="logo" src={logo} alt="logo" />
+                    </Link>
+                </div>
+
+                {/* CENTER */}
+                <div className="nav-center">
                     <NavLink to="/" active={isActive("/")}>🏠 Home</NavLink>
                     {user && <NavLink to="/for-you" active={isActive("/for-you")}>⭐ For You</NavLink>}
                     {user && <NavLink to="/bookmarks" active={isActive("/bookmarks")}>🔖 Saved</NavLink>}
                 </div>
 
-                {/* Auth actions */}
-                <div className="auth-section" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {/* RIGHT */}
+                <div className="nav-right">
                     {user ? (
                         <>
-                            <Link to="/preferences" className="btn btn-outline btn-sm"
-                                style={{ textDecoration: "none" }}>
-                                ⚙️ Preferences
-                            </Link>
-                            <span style={{ fontSize: 13, color: "var(--text2)" }}>
-                                Hi, {user.name.split(" ")[0]}
-                            </span>
+                            <Link to="/preferences" className="btn btn-outline btn-sm">⚙️ Preferences</Link>
+                            <span style={{ fontSize: 13 }}>Hi, {user.name.split(" ")[0]}</span>
                             <button className="btn btn-sm" onClick={handleLogout}
-                                style={{ background: "#fee2e2", color: "#b91c1c", border: "none" }}>
+                                style={{ background: "#fee2e2", color: "#b91c1c" }}>
                                 Logout
                             </button>
                         </>
                     ) : (
                         <>
-                            <Link to="/login" className="btn btn-outline btn-sm"
-                                style={{ textDecoration: "none" }}>Login</Link>
-                            <Link to="/register" className="btn btn-primary btn-sm"
-                                style={{ textDecoration: "none" }}>Sign Up</Link>
+                            <Link to="/login" className="btn btn-outline btn-sm">Login</Link>
+                            <Link to="/register" className="btn btn-primary btn-sm">Sign Up</Link>
                         </>
                     )}
                 </div>
+
             </div>
 
             {/* Mobile bottom nav */}
