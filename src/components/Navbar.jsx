@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import logo from "../assets/full-logo.png";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -40,7 +41,7 @@ export default function Navbar() {
             color: "#fff", fontWeight: 800, fontSize: 14,
           }}>F</div>
           <span style={{ fontWeight: 800, fontSize: 17, color: "var(--text)" }}>Flash10</span> */}
-          <img src="./public/full-logo.png" alt="logo" width={100}/>
+          <img src={logo} alt="logo" width={100} />
         </Link>
 
         {/* Desktop nav links */}
