@@ -159,7 +159,7 @@ export default function NewsDetail() {
                 disabled={summarizing}
                 style={{ alignSelf: "flex-start" }}
               >
-                {summarizing ? "⏳ Summarizing..." : "✨ AI Summary (Coming Soon)"}
+                {summarizing ? "⏳ Summarizing..." : "✨ AI Summary (Free)"}
                 {!user && <span style={{ fontSize: 11, opacity: 0.8 }}> (Login required)</span>}
               </button>
               {summary?.startsWith("⏳") && (
