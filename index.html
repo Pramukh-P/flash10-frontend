@@ -3,25 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Flash10</title>
-    <meta name="description" content="Flash10 — Top headlines from India and the world, updated every 12 hours" />
+    <title>Flash10 — Latest News</title>
+    <meta name="description" content="Flash10 — Top headlines from India and the world" />
 
-    <!-- PWA meta tags -->
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#0f172a" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Flash10" />
-
-    <!-- Apple touch icons (iOS doesn't use manifest icons) -->
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png" />
-
-    <!-- Favicon -->
     <link rel="icon" type="image/png" href="/icons/icon-192.png" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Register service worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(() => console.log('SW registered'))
+            .catch((e) => console.log('SW failed:', e));
+        });
+      }
+    </script>
   </body>
 </html>
