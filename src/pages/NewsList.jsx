@@ -1,5 +1,5 @@
 // flash10-frontend/src/pages/NewsList.jsx
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import NewsCard from "../components/NewsCard.jsx";
 import { apiFetch } from "../utils/api.js";
@@ -17,33 +17,33 @@ const CATEGORIES = [
   { key: "world", label: "World", icon: "🌍" },
 ];
 
+const CACHE_KEY = "newslist_cache";
+
 export default function NewsList() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Restore state from URL params (so Back button works perfectly)
   const [category, setCategory] = useState(searchParams.get("cat") || "all");
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [dateFilter, setDateFilter] = useState(searchParams.get("date") || "");
   const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get("q") || "");
-  const [news, setNews] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(parseInt(searchParams.get("page") || "1"));
   const [totalPages, setTotalPages] = useState(1);
-  const scrollRestored = useRef(false);
 
-  // Restore scroll position after news loads
-  useEffect(() => {
-    if (!loading && !scrollRestored.current) {
-      const savedScroll = sessionStorage.getItem("newslist_scroll");
-      if (savedScroll) {
-        setTimeout(() => {
-          window.scrollTo({ top: parseInt(savedScroll), behavior: "instant" });
-          sessionStorage.removeItem("newslist_scroll");
-        }, 50);
-      }
-      scrollRestored.current = true;
-    }
-  }, [loading]);
+  // Load cached news instantly — no flash to empty state
+  const [news, setNews] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      return cached ? JSON.parse(cached).news : [];
+    } catch { return []; }
+  });
+
+  // true only on initial back-navigation render — suppress loader
+  const isRestoringScroll = useRef(
+    !!sessionStorage.getItem("newslist_scroll")
+  );
+  const [loading, setLoading] = useState(!isRestoringScroll.current);
+  const scrollRestored = useRef(false);
+  const didMount = useRef(false);
 
   // Debounce search
   useEffect(() => {
@@ -51,10 +51,16 @@ export default function NewsList() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Reset page when filters change
-  useEffect(() => { setPage(1); scrollRestored.current = false; }, [category, debouncedSearch, dateFilter]);
+  // Reset page on filter change (but not on mount)
+  useEffect(() => {
+    if (!didMount.current) return;
+    setPage(1);
+    isRestoringScroll.current = false;
+  }, [category, debouncedSearch, dateFilter]);
 
-  // Sync state to URL so Back button restores everything
+  useEffect(() => { didMount.current = true; }, []);
+
+  // Sync URL params
   useEffect(() => {
     const params = {};
     if (category !== "all") params.cat = category;
@@ -66,18 +72,54 @@ export default function NewsList() {
 
   // Fetch news
   useEffect(() => {
-    setLoading(true);
+    // If restoring scroll, show cached data first without loader,
+    // then silently refresh in background
+    const silent = isRestoringScroll.current;
+    if (!silent) setLoading(true);
+
     const params = new URLSearchParams({ category, page, limit: 20 });
     if (debouncedSearch) params.set("search", debouncedSearch);
     if (dateFilter) params.set("date", dateFilter);
+
     apiFetch(`/news?${params}`)
       .then((data) => {
-        setNews(data.news || []);
+        const fetched = data.news || [];
+        setNews(fetched);
         setTotalPages(data.totalPages || 1);
+        // Update cache with fresh data
+        try {
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify({ news: fetched }));
+        } catch {}
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [category, page, debouncedSearch, dateFilter]);
+
+  // Restore scroll — runs after news is painted
+  useEffect(() => {
+    if (scrollRestored.current) return;
+    const savedScroll = sessionStorage.getItem("newslist_scroll");
+    if (!savedScroll) return;
+
+    scrollRestored.current = true;
+
+    // Use requestAnimationFrame to scroll after browser has painted
+    const tryScroll = (attempts = 0) => {
+      const target = parseInt(savedScroll);
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+
+      if (maxScroll >= target || attempts > 10) {
+        // instant jump — no animation, no flash
+        window.scrollTo({ top: target, behavior: "instant" });
+        sessionStorage.removeItem("newslist_scroll");
+      } else {
+        // Page not tall enough yet — wait for next frame
+        requestAnimationFrame(() => tryScroll(attempts + 1));
+      }
+    };
+
+    requestAnimationFrame(() => tryScroll());
+  }, [news]);
 
   // Group by dayTag
   const grouped = news.reduce((acc, item) => {
@@ -88,23 +130,23 @@ export default function NewsList() {
   }, {});
   const sortedDays = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
 
-  // Generate date options for last 7 days
+  // Date options for last 7 days
   const dateOptions = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const val = d.toISOString().split("T")[0];
-    const label = i === 0 ? "Today" : i === 1 ? "Yesterday" : d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+    const label = i === 0 ? "Today" : i === 1 ? "Yesterday"
+      : d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
     return { val, label };
   });
 
   return (
     <div className="page">
-      {/* Header */}
       <div style={{ marginBottom: 20 }}>
         <h1 className="page-title">📰 Flash10 News</h1>
         <p className="page-sub">Stay updated with the latest headlines</p>
 
-        {/* Search + Date filter row */}
+        {/* Search + Date filter */}
         <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
           <div className="search-bar" style={{ flex: 1, minWidth: 200, maxWidth: 480 }}>
             <span>🔍</span>
@@ -116,11 +158,12 @@ export default function NewsList() {
             />
             {search && (
               <button onClick={() => setSearch("")}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text2)" }}>✕</button>
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text2)" }}>
+                ✕
+              </button>
             )}
           </div>
 
-          {/* Date filter */}
           <div style={{ position: "relative" }}>
             <select
               value={dateFilter}
@@ -131,9 +174,7 @@ export default function NewsList() {
                 borderRadius: 10,
                 background: dateFilter ? "var(--tag-bg)" : "var(--card)",
                 color: dateFilter ? "var(--accent)" : "var(--text)",
-                fontSize: 14,
-                outline: "none",
-                cursor: "pointer",
+                fontSize: 14, outline: "none", cursor: "pointer",
                 appearance: "none",
                 fontWeight: dateFilter ? 600 : 400,
               }}
@@ -165,8 +206,8 @@ export default function NewsList() {
         </div>
       </div>
 
-      {/* Content */}
-      {loading ? (
+      {/* Show loader only on fresh navigations, not on back */}
+      {loading && news.length === 0 ? (
         <NewsLoader />
       ) : news.length === 0 ? (
         <div className="empty-state">
@@ -192,7 +233,6 @@ export default function NewsList() {
             </div>
           ))}
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 32 }}>
               <button className="btn btn-outline btn-sm" disabled={page === 1}
@@ -210,7 +250,6 @@ export default function NewsList() {
   );
 }
 
-// Beautiful skeleton loader
 function NewsLoader() {
   return (
     <div>
@@ -240,7 +279,7 @@ function NewsLoader() {
           background-size: 200% 100%;
           animation: shimmer 1.4s infinite;
         }
-        @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
       `}</style>
     </div>
   );
