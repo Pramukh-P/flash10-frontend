@@ -1,5 +1,6 @@
 // flash10-frontend/src/pages/NewsList.jsx
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import NewsCard from "../components/NewsCard.jsx";
 import { apiFetch } from "../utils/api.js";
 
@@ -17,13 +18,32 @@ const CATEGORIES = [
 ];
 
 export default function NewsList() {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Restore state from URL params (so Back button works perfectly)
+  const [category, setCategory] = useState(searchParams.get("cat") || "all");
+  const [search, setSearch] = useState(searchParams.get("q") || "");
+  const [dateFilter, setDateFilter] = useState(searchParams.get("date") || "");
+  const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get("q") || "");
   const [news, setNews] = useState([]);
-  const [category, setCategory] = useState("all");
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(parseInt(searchParams.get("page") || "1"));
   const [totalPages, setTotalPages] = useState(1);
+  const scrollRestored = useRef(false);
+
+  // Restore scroll position after news loads
+  useEffect(() => {
+    if (!loading && !scrollRestored.current) {
+      const savedScroll = sessionStorage.getItem("newslist_scroll");
+      if (savedScroll) {
+        setTimeout(() => {
+          window.scrollTo({ top: parseInt(savedScroll), behavior: "instant" });
+          sessionStorage.removeItem("newslist_scroll");
+        }, 50);
+      }
+      scrollRestored.current = true;
+    }
+  }, [loading]);
 
   // Debounce search
   useEffect(() => {
@@ -31,18 +51,25 @@ export default function NewsList() {
     return () => clearTimeout(t);
   }, [search]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [category, debouncedSearch]);
+  // Reset page when filters change
+  useEffect(() => { setPage(1); scrollRestored.current = false; }, [category, debouncedSearch, dateFilter]);
 
+  // Sync state to URL so Back button restores everything
+  useEffect(() => {
+    const params = {};
+    if (category !== "all") params.cat = category;
+    if (debouncedSearch) params.q = debouncedSearch;
+    if (dateFilter) params.date = dateFilter;
+    if (page > 1) params.page = page;
+    setSearchParams(params, { replace: true });
+  }, [category, debouncedSearch, dateFilter, page]);
+
+  // Fetch news
   useEffect(() => {
     setLoading(true);
-    const params = new URLSearchParams({
-      category,
-      page,
-      limit: 20,
-      ...(debouncedSearch ? { search: debouncedSearch } : {}),
-    });
+    const params = new URLSearchParams({ category, page, limit: 20 });
+    if (debouncedSearch) params.set("search", debouncedSearch);
+    if (dateFilter) params.set("date", dateFilter);
     apiFetch(`/news?${params}`)
       .then((data) => {
         setNews(data.news || []);
@@ -50,7 +77,7 @@ export default function NewsList() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [category, page, debouncedSearch]);
+  }, [category, page, debouncedSearch, dateFilter]);
 
   // Group by dayTag
   const grouped = news.reduce((acc, item) => {
@@ -61,6 +88,15 @@ export default function NewsList() {
   }, {});
   const sortedDays = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
 
+  // Generate date options for last 7 days
+  const dateOptions = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const val = d.toISOString().split("T")[0];
+    const label = i === 0 ? "Today" : i === 1 ? "Yesterday" : d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+    return { val, label };
+  });
+
   return (
     <div className="page">
       {/* Header */}
@@ -68,21 +104,51 @@ export default function NewsList() {
         <h1 className="page-title">📰 Flash10 News</h1>
         <p className="page-sub">Stay updated with the latest headlines</p>
 
-        {/* Search */}
-        <div className="search-bar" style={{ marginBottom: 14, maxWidth: 480 }}>
-          <span>🔍</span>
-          <input
-            type="text"
-            placeholder="Search headlines..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text2)" }}
-            >✕</button>
-          )}
+        {/* Search + Date filter row */}
+        <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+          <div className="search-bar" style={{ flex: 1, minWidth: 200, maxWidth: 480 }}>
+            <span>🔍</span>
+            <input
+              type="text"
+              placeholder="Search headlines..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button onClick={() => setSearch("")}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text2)" }}>✕</button>
+            )}
+          </div>
+
+          {/* Date filter */}
+          <div style={{ position: "relative" }}>
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              style={{
+                padding: "10px 36px 10px 14px",
+                border: `1.5px solid ${dateFilter ? "var(--accent)" : "var(--card-border)"}`,
+                borderRadius: 10,
+                background: dateFilter ? "var(--tag-bg)" : "var(--card)",
+                color: dateFilter ? "var(--accent)" : "var(--text)",
+                fontSize: 14,
+                outline: "none",
+                cursor: "pointer",
+                appearance: "none",
+                fontWeight: dateFilter ? 600 : 400,
+              }}
+            >
+              <option value="">📅 All dates</option>
+              {dateOptions.map((d) => (
+                <option key={d.val} value={d.val}>{d.label}</option>
+              ))}
+            </select>
+            <span style={{
+              position: "absolute", right: 12, top: "50%",
+              transform: "translateY(-50%)", pointerEvents: "none",
+              color: "var(--text2)", fontSize: 12,
+            }}>▼</span>
+          </div>
         </div>
 
         {/* Category pills */}
@@ -101,15 +167,11 @@ export default function NewsList() {
 
       {/* Content */}
       {loading ? (
-        <div className="spinner" />
+        <NewsLoader />
       ) : news.length === 0 ? (
         <div className="empty-state">
           <h3>No articles found</h3>
-          <p>
-            {debouncedSearch
-              ? `No results for "${debouncedSearch}"`
-              : "Check back later for updates"}
-          </p>
+          <p>{debouncedSearch ? `No results for "${debouncedSearch}"` : "Check back later for updates"}</p>
         </div>
       ) : (
         <>
@@ -118,6 +180,9 @@ export default function NewsList() {
               <div className="day-header">
                 <div className="day-header-bar" />
                 <h3>{formatDay(day)}</h3>
+                <span style={{ fontSize: 12, color: "var(--text2)", marginLeft: 8 }}>
+                  {grouped[day].length} articles
+                </span>
               </div>
               <div className="news-grid">
                 {grouped[day].map((item) => (
@@ -130,23 +195,53 @@ export default function NewsList() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 32 }}>
-              <button
-                className="btn btn-outline btn-sm"
-                disabled={page === 1}
-                onClick={() => setPage((p) => p - 1)}
-              >← Prev</button>
+              <button className="btn btn-outline btn-sm" disabled={page === 1}
+                onClick={() => setPage((p) => p - 1)}>← Prev</button>
               <span style={{ padding: "6px 12px", fontSize: 14, color: "var(--text2)" }}>
                 {page} / {totalPages}
               </span>
-              <button
-                className="btn btn-outline btn-sm"
-                disabled={page === totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >Next →</button>
+              <button className="btn btn-outline btn-sm" disabled={page === totalPages}
+                onClick={() => setPage((p) => p + 1)}>Next →</button>
             </div>
           )}
         </>
       )}
+    </div>
+  );
+}
+
+// Beautiful skeleton loader
+function NewsLoader() {
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "32px 0 14px" }}>
+        <div className="skel" style={{ width: 5, height: 22, borderRadius: 3 }} />
+        <div className="skel" style={{ width: 120, height: 20, borderRadius: 6 }} />
+      </div>
+      <div className="news-grid">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="card" style={{ pointerEvents: "none" }}>
+            <div className="skel" style={{ width: "100%", height: 170 }} />
+            <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+              <div className="skel" style={{ width: "90%", height: 16, borderRadius: 4 }} />
+              <div className="skel" style={{ width: "75%", height: 16, borderRadius: 4 }} />
+              <div className="skel" style={{ width: "55%", height: 16, borderRadius: 4 }} />
+              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                <div className="skel" style={{ width: 60, height: 20, borderRadius: 999 }} />
+                <div className="skel" style={{ width: 40, height: 20, borderRadius: 999, marginLeft: "auto" }} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <style>{`
+        .skel {
+          background: linear-gradient(90deg, var(--card-border) 25%, var(--bg2) 50%, var(--card-border) 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.4s infinite;
+        }
+        @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
+      `}</style>
     </div>
   );
 }
@@ -156,7 +251,6 @@ function formatDay(dateStr) {
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
-
   if (d.toDateString() === today.toDateString()) return "Today";
   if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
   return d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
