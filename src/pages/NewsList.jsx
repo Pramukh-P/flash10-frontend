@@ -29,7 +29,7 @@ export default function NewsList() {
   const [page, setPage] = useState(parseInt(searchParams.get("page") || "1"));
   const [totalPages, setTotalPages] = useState(1);
 
-  // Load cached news instantly — no flash to empty state
+  // Load cached news instantly
   const [news, setNews] = useState(() => {
     try {
       const cached = sessionStorage.getItem(CACHE_KEY);
@@ -37,11 +37,12 @@ export default function NewsList() {
     } catch { return []; }
   });
 
-  // true only on initial back-navigation render — suppress loader
-  const isRestoringScroll = useRef(
-    !!sessionStorage.getItem("newslist_scroll")
-  );
+  const isRestoringScroll = useRef(!!sessionStorage.getItem("newslist_scroll"));
   const [loading, setLoading] = useState(!isRestoringScroll.current);
+
+  // fade: "in" | "out" | "idle"
+  const [fade, setFade] = useState("idle");
+
   const scrollRestored = useRef(false);
   const didMount = useRef(false);
 
@@ -51,11 +52,13 @@ export default function NewsList() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Reset page on filter change (but not on mount)
+  // On filter change: reset page, trigger fade-out
   useEffect(() => {
     if (!didMount.current) return;
     setPage(1);
     isRestoringScroll.current = false;
+    // Fade out current content before fetch
+    setFade("out");
   }, [category, debouncedSearch, dateFilter]);
 
   useEffect(() => { didMount.current = true; }, []);
@@ -72,8 +75,6 @@ export default function NewsList() {
 
   // Fetch news
   useEffect(() => {
-    // If restoring scroll, show cached data first without loader,
-    // then silently refresh in background
     const silent = isRestoringScroll.current;
     if (!silent) setLoading(true);
 
@@ -84,40 +85,44 @@ export default function NewsList() {
     apiFetch(`/news?${params}`)
       .then((data) => {
         const fetched = data.news || [];
+        // Set new news then fade in
         setNews(fetched);
         setTotalPages(data.totalPages || 1);
-        // Update cache with fresh data
         try {
           sessionStorage.setItem(CACHE_KEY, JSON.stringify({ news: fetched }));
         } catch {}
+        // Small delay so browser paints new content before fading in
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => setFade("in"));
+        });
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [category, page, debouncedSearch, dateFilter]);
 
-  // Restore scroll — runs after news is painted
+  // After fade-in completes, reset to idle
+  useEffect(() => {
+    if (fade !== "in") return;
+    const t = setTimeout(() => setFade("idle"), 350);
+    return () => clearTimeout(t);
+  }, [fade]);
+
+  // Restore scroll position on back navigation
   useEffect(() => {
     if (scrollRestored.current) return;
     const savedScroll = sessionStorage.getItem("newslist_scroll");
     if (!savedScroll) return;
-
     scrollRestored.current = true;
-
-    // Use requestAnimationFrame to scroll after browser has painted
     const tryScroll = (attempts = 0) => {
       const target = parseInt(savedScroll);
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-
       if (maxScroll >= target || attempts > 10) {
-        // instant jump — no animation, no flash
         window.scrollTo({ top: target, behavior: "instant" });
         sessionStorage.removeItem("newslist_scroll");
       } else {
-        // Page not tall enough yet — wait for next frame
         requestAnimationFrame(() => tryScroll(attempts + 1));
       }
     };
-
     requestAnimationFrame(() => tryScroll());
   }, [news]);
 
@@ -140,8 +145,32 @@ export default function NewsList() {
     return { val, label };
   });
 
+  // Content opacity based on fade state
+  const contentStyle = {
+    transition: "opacity 0.25s ease, transform 0.25s ease",
+    opacity: fade === "out" ? 0 : 1,
+    transform: fade === "out" ? "translateY(6px)" : "translateY(0)",
+  };
+
   return (
     <div className="page">
+      {/* CSS for fade animation */}
+      <style>{`
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .news-content-enter {
+          animation: fadeSlideIn 0.3s ease forwards;
+        }
+        .skel {
+          background: linear-gradient(90deg, var(--card-border) 25%, var(--bg2) 50%, var(--card-border) 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.4s infinite;
+        }
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+      `}</style>
+
       <div style={{ marginBottom: 20 }}>
         <h1 className="page-title">📰 Flash10 News</h1>
         <p className="page-sub">Stay updated with the latest headlines</p>
@@ -206,16 +235,16 @@ export default function NewsList() {
         </div>
       </div>
 
-      {/* Show loader only on fresh navigations, not on back */}
+      {/* Skeleton loader — only on first load with no cached content */}
       {loading && news.length === 0 ? (
         <NewsLoader />
-      ) : news.length === 0 ? (
-        <div className="empty-state">
+      ) : news.length === 0 && !loading ? (
+        <div className="empty-state" style={contentStyle}>
           <h3>No articles found</h3>
           <p>{debouncedSearch ? `No results for "${debouncedSearch}"` : "Check back later for updates"}</p>
         </div>
       ) : (
-        <>
+        <div style={contentStyle} className={fade === "in" ? "news-content-enter" : ""}>
           {sortedDays.map((day) => (
             <div key={day}>
               <div className="day-header">
@@ -244,7 +273,7 @@ export default function NewsList() {
                 onClick={() => setPage((p) => p + 1)}>Next →</button>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );
@@ -273,14 +302,6 @@ function NewsLoader() {
           </div>
         ))}
       </div>
-      <style>{`
-        .skel {
-          background: linear-gradient(90deg, var(--card-border) 25%, var(--bg2) 50%, var(--card-border) 75%);
-          background-size: 200% 100%;
-          animation: shimmer 1.4s infinite;
-        }
-        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-      `}</style>
     </div>
   );
 }
